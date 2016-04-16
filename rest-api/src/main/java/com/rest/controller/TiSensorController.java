@@ -1,15 +1,16 @@
 package com.rest.controller;
 
-import com.rest.config.Constants;
+import com.rest.model.TiSensorDatapoint;
 import com.rest.service.TiSensorService;
-import com.rest.service.TiSensorServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.rest.model.TiSensorDatapoint;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Created by uday on 3/21/16.
@@ -29,15 +30,9 @@ public class TiSensorController {
             consumes = {"application/json"})
     public ResponseEntity<Void> checkAndInsertDataPoint(
             @RequestBody TiSensorDatapoint datapoint){
-
-        // check if tiSensorId is registered
-        if(!tiSensorServiceImpl.isRegisteredIdAttachUserId(datapoint)){
-            logger.info("Unregistered TiSensorId is received!");
-            return new ResponseEntity<Void>(HttpStatus.NOT_FOUND);
-        }
-
-        tiSensorServiceImpl.save(datapoint);
-        return new ResponseEntity<Void>(HttpStatus.CREATED);
+        logger.info("Datapoint is received!");
+        tiSensorServiceImpl.publishDatapoint(datapoint);
+        return new ResponseEntity<Void>(HttpStatus.ACCEPTED);
     }
 
     @RequestMapping(value = "/", method = RequestMethod.GET)

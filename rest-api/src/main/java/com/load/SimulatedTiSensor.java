@@ -2,8 +2,6 @@ package com.load;
 
 import com.rest.config.Constants;
 
-import java.util.HashMap;
-
 /**
  * Created by uday on 3/22/16.
  */
