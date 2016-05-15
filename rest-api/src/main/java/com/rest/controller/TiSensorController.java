@@ -23,8 +23,7 @@ public class TiSensorController {
     TiSensorService tiSensorServiceImpl;
 
     private static Logger logger = LoggerFactory.getLogger(
-            TiSensorController.class);;
-
+            TiSensorController.class);
 
     @RequestMapping(value = "/datapoint", method = RequestMethod.POST,
             consumes = {"application/json"})

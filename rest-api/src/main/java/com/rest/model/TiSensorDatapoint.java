@@ -44,4 +44,14 @@ public class TiSensorDatapoint {
     public void setTiSensorId(String tiSensorId) {
         this.tiSensorId = tiSensorId;
     }
+
+    @Override
+    public String toString() {
+        return "TiSensorDatapoint{" +
+                "light=" + light +
+                ", temperature=" + temperature +
+                ", timestamp=" + timestamp +
+                ", tiSensorId='" + tiSensorId + '\'' +
+                '}';
+    }
 }

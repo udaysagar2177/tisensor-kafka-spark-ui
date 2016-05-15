@@ -1,6 +1,5 @@
-# This is an example of a Maestro environment description file. It starts up a
-# multi-node ZooKeeper cluster to serve a multi-node Kafka broker cluster than
-# can be used for pub/sub and messaging.
+# This is my Maestro environment description file.
+# It starts up zookeeper, kafka, rest-api
 __maestro:
   schema: 2
 
@@ -14,15 +13,39 @@ audit:
   - type: log
     file: /tmp/maestro.auditlog
 
+{%- with %}
+{%- set env_variables = {
+        'environment': 'production',
+        'KAFKA_GROUP': 'TISENSOR',
+        'KAFKA_TOPIC': 'DATAPOINT',
+        'KAFKA_PER_CONSUMER_THREADS': 3,
+        'SIMULATED_TISENSOR_COUNT': 3,
+        'SIMULATED_TISENSOR_ID_HANDLE': 'TISENSOR_ID'
+        } %}
+
+# 1-node kafka cluster.
+{%- set kafka_servers = {
+        'ship': [('kafka-1', 1)]} %}
+
+# 1-node ZooKeeper cluster.
+{%- set zookeeper_servers = {
+        'ship': [('zk-node-1', 1)]} %}
+
+# rest-api
+{%- set rest_api_servers = {
+        'ship': [('rest-api-1', 1)]} %}
+
+# rest-api-load
+{%- set rest_api_load_servers = {
+        'ship': [('rest-api-load-1', 1)]} %}
+
 services:
-  # 3-node ZooKeeper cluster.
-  {%- with servers = {'ship': [('zk-node-1', 1)]} %}
   zookeeper:
     image: quay.io/signalfuse/zookeeper:3.4.6-3
     env:
       {#- Unfortunately Jinja2 doesn't allow us to be less verbose here. #}
       {%- set serverids = [] %}
-      {%- for ship, details in servers.items() %}
+      {%- for ship, details in zookeeper_servers.items() %}
         {%- for name, server_id in details %}
           {%- set DO = serverids.append('{}:{}'.format(name, server_id)) %}
         {%- endfor %}
@@ -31,7 +54,7 @@ services:
       ZOOKEEPER_SERVER_IDS: {{ serverids|join(',') }}
       {%- endif %}
     instances:
-      {%- for ship, details in servers.items() %}
+      {%- for ship, details in zookeeper_servers.items() %}
       {%- for name, server_id in details %}
       {{ name }}:
         ship: {{ ship }}
@@ -53,10 +76,7 @@ services:
           SERVER_ID: {{ server_id }}
       {%- endfor %}
       {%- endfor %}
-  {%- endwith %}
 
-  # 3-node Kafka cluster.
-  {%- with servers = {'ship': [('kafka-1', 1), ('kafka-2', 2), ('kafka-3', 3)]} %}
   kafka:
     image: quay.io/signalfuse/kafka:0.9.0.1-0
     requires: [ zookeeper ]
@@ -66,7 +86,7 @@ services:
       REPLICATION: 3
       AUTO_LEADER_REBALANCE: true
     instances:
-      {%- for ship, details in servers.items() %}
+      {%- for ship, details in kafka_servers.items() %}
       {%- for name, broker_id in details %}
       {{ name }}:
         ship: {{ ship }}
@@ -81,7 +101,43 @@ services:
         stop_timeout: 60
       {%- endfor %}
       {%- endfor %}
-  {%- endwith %}
+
+
+  restapi:
+    image: tisensor_rest_kafka_spark:latest
+    requires: [ zookeeper, kafka ]
+    env:
+      {%- for var_name, var_value in env_variables.iteritems() %}
+      {{ var_name }}: {{ var_value }}
+      {%- endfor %}
+    instances:
+      {%- for ship, details in rest_api_servers.items() %}
+      {%- for name, server_id in details %}
+      {{ name }}:
+        ship: {{ ship }}
+        ports:
+          rest: {{ 8080 + loop.index0 }}
+        lifecycle:
+          running: [{type: tcp, port: rest}]
+        stop_timeout: 60
+      {%- endfor %}
+      {%- endfor %}
+
+  restapi-load:
+    image: tisensor_rest_kafka_spark:latest
+    requires: [ restapi ]
+    env:
+      {%- for var_name, var_value in env_variables.iteritems() %}
+      {{ var_name }}: {{ var_value }}
+      {%- endfor %}
+      LOAD_GENERATION: 'True'
+    instances:
+      {%- for ship, details in rest_api_load_servers.items() %}
+      {%- for name, server_id in details %}
+      {{ name }}:
+        ship: {{ ship }}
+      {%- endfor %}
+      {%- endfor %}
 
   envtest:
     image: stackbrew/ubuntu
@@ -94,3 +150,5 @@ services:
           FOO: "bar test"
         workdir: /tmp
         command: "bash -c 'echo Here is the environment of a service depending on ZooKeeper and Kafka: && env'"
+
+{%- endwith %}

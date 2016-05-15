@@ -4,6 +4,7 @@ package com.rest.config;
  * Created by uday on 3/24/16.
  */
 
+/*
 public class Constants {
 
     public static final String DATAPOINT_REST_URL;
@@ -14,7 +15,8 @@ public class Constants {
     public static final int SIMULATED_TISENSOR_COUNT;
 
     static {
-        if(System.getenv("environment") == "production") {
+        if(System.getenv("environment") != null &&
+                System.getenv("environment").equals("production")) {
             DATAPOINT_REST_URL = System.getenv("DATAPOINT_REST_URL");
             SIMULATED_TISENSOR_COUNT = Integer.parseInt(System.getenv
                     ("SIMULATED_TISENSOR_COUNT"));
@@ -23,4 +25,7 @@ public class Constants {
             SIMULATED_TISENSOR_COUNT = 3;
         }
     }
+
+
 }
+*/

@@ -1,6 +1,5 @@
 package com.load;
 
-import com.rest.config.Constants;
 import com.rest.model.TiSensorDatapoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,14 +12,15 @@ import java.util.Random;
  */
 public class RunnableTiSensor implements Runnable {
     private String tiSensorId;
-    private Logger logger;
     private RestTemplate restTemplate;
+    private String DATAPOINT_REST_URL;
+    private static Logger logger = LoggerFactory
+            .getLogger(RunnableTiSensor.class);
 
-    public RunnableTiSensor(String tiSensorId){
+    public RunnableTiSensor(String tiSensorId, String datapoint_rest_url){
         this.tiSensorId = tiSensorId;
-        logger = LoggerFactory.getLogger(
-                RunnableTiSensor.class+", "+tiSensorId);
         restTemplate = new RestTemplate();
+        this.DATAPOINT_REST_URL = datapoint_rest_url;
     }
 
     public void run(){
@@ -40,9 +40,9 @@ public class RunnableTiSensor implements Runnable {
 
     private void sendDataPoint(TiSensorDatapoint datapoint){
         try{
-            logger.debug("Sending datapoint to "+ Constants.DATAPOINT_REST_URL);
+            logger.debug("Sending datapoint to "+ this.DATAPOINT_REST_URL);
             restTemplate.postForLocation(
-                    Constants.DATAPOINT_REST_URL,
+                    this.DATAPOINT_REST_URL,
                     datapoint);
         }catch(Exception e){
             logger.error("Failed to send datapoint! "+e);
