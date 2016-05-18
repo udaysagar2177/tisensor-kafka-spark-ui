@@ -1,22 +1,20 @@
 package com.tisensor;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Map;
-
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
-import org.apache.spark.storage.StorageLevel;
-import org.apache.spark.streaming.Durations;
-import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.kafka.KafkaUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class App {
@@ -24,47 +22,57 @@ public class App {
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
 
-        String masterURL = "local[4]";
-        String appName = "Meetup RSVPs";
-        String URL = "http://stream.meetup.com/2/rsvps";
-        int durationInSeconds = 2;
+        String masterURL = "local[*]";
+        String appName = "tisensor_spark";
+        String topicName = args[0];
+        String zkQuorum = args[1];
+        final String pubnubChannel = "tisensor-spark";
 
-        SparkConf conf = new SparkConf().setMaster(masterURL).setAppName(appName);
-        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(durationInSeconds));
+        SparkConf sparkConf = new SparkConf().setMaster(masterURL).setAppName(appName);
 
-        JavaDStream <Map> rsvps = jssc.receiverStream(new JavaCustomReceiver(URL));
+        JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, new
+                Duration(5000));
 
-        // Get the RSVP with value = yes
-        JavaDStream <Map> rsvpsYes = rsvps.filter(new Function<Map, Boolean>(){
-            public Boolean call(Map rsvp) {
-                if (rsvp.get("response").toString().compareTo("yes") == 0){
-                    return true;
-                }
-                return false;
+        Map<String, Integer> topicMap = new HashMap<>();
+        topicMap.put(topicName, 1);
+
+        JavaPairReceiverInputDStream<String, String> datapoints =
+                KafkaUtils.createStream(jssc,
+                        zkQuorum, "spark-consumer-group", topicMap);
+
+
+        //datapoints.count().print();
+
+        datapoints.count().foreach(new Function<JavaRDD<Long>, Void>() {
+            @Override
+            public Void call(JavaRDD<Long> longJavaRDD) throws Exception {
+                longJavaRDD.foreach(new VoidFunction<Long>() {
+                    @Override
+                    public void call(Long aLong) throws Exception {
+                        System.out.println(aLong);
+                        try {
+                            JsonObject data = new JsonObject();
+                            data.addProperty("Total Datapoints Count:", aLong);
+                            MyPubnub.pubnub.publish(pubnubChannel, new GsonBuilder().create().toJson
+                                    (data), MyPubnub.callback);
+                        }catch(Exception e){
+                            System.out.println("Unable to publish data to " +
+                                    "PubNub");
+                        }
+                    }
+                });
+                return null;
             }
         });
-		/*
-		 * Spark is useful when the input data coming is huge (in future).
-		 */
 
-        rsvpsYes.foreachRDD(
-                new Function<JavaRDD<Map>, Void>() {
-                    public Void call(JavaRDD<Map> rsvpRDD) throws Exception {
-                        rsvpRDD.foreach(new VoidFunction<Map>(){
-                            public void call(Map rsvpMap) throws Exception {
-                                Connection connection = getConnection();
-                                if(connection == null){
-                                    System.out.println("Unable to get DB connection");
-                                    return;
-                                }
-                                //insertRsvpsIntoDatabase(connection, rsvpMap);
-                                connection.close();
-                            }
-                        });
+        /*datapoints.foreachRDD(
+                new Function<JavaRDD<String>, String>() {
+                    public Void call(JavaRDD<String> dpRDD) throws Exception {
+                        dp
                         return null;
                     }
                 }
-        );
+        );*/
 
         jssc.start(); // Start the computation
         jssc.awaitTermination();

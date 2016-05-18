@@ -39,6 +39,10 @@ audit:
 {%- set rest_api_load_servers = {
         'ship': [('rest-api-load-1', 1)]} %}
 
+# spark-standalone-cluster, should be only one
+{%- set spark_servers = {
+        'ship': [('spark-cluster', 1)]} %}
+
 services:
   zookeeper:
     image: quay.io/signalfuse/zookeeper:3.4.6-3
@@ -133,6 +137,21 @@ services:
       LOAD_GENERATION: 'True'
     instances:
       {%- for ship, details in rest_api_load_servers.items() %}
+      {%- for name, server_id in details %}
+      {{ name }}:
+        ship: {{ ship }}
+      {%- endfor %}
+      {%- endfor %}
+
+  tisensor-spark:
+    image: tisensor_spark:latest
+    requires: [kafka, restapi]
+    env:
+      {%- for var_name, var_value in env_variables.iteritems() %}
+      {{ var_name }}: {{ var_value }}
+      {%- endfor %}
+    instances:
+      {%- for ship, details in spark_servers.items() %}
       {%- for name, server_id in details %}
       {{ name }}:
         ship: {{ ship }}
