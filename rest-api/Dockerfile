@@ -10,6 +10,5 @@ COPY pom.xml /rest-api/
 COPY run.py /rest-api/
 
 WORKDIR /rest-api
-#RUN mvn clean install
 
 CMD ["python", "run.py"]
