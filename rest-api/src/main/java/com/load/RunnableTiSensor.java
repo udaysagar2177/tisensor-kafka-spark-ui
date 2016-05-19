@@ -31,7 +31,7 @@ public class RunnableTiSensor implements Runnable {
             prepareDataPoint(random, temperatureStart, datapoint);
             sendDataPoint(datapoint);
             try {
-                Thread.sleep(1000);
+                Thread.sleep(random.nextInt(500));
             }catch(Exception e){
                 logger.info("Thread: "+tiSensorId+" Interrupted!"+e);
             }
