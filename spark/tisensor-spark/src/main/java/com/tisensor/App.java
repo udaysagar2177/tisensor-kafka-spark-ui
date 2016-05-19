@@ -2,7 +2,6 @@ package com.tisensor;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 import com.pubnub.api.Callback;
 import com.pubnub.api.Pubnub;
 import com.pubnub.api.PubnubError;
@@ -16,6 +15,7 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,7 +42,7 @@ public class App {
         SparkConf sparkConf = new SparkConf().setMaster(masterURL).setAppName(appName);
 
         JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, new
-                Duration(5000));
+                Duration(1000));
 
         Map<String, Integer> topicMap = new HashMap<>();
         topicMap.put(topicName, 1);
@@ -50,9 +50,6 @@ public class App {
         JavaPairReceiverInputDStream<String, String> datapoints =
                 KafkaUtils.createStream(jssc,
                         zkQuorum, "spark-consumer-group", topicMap);
-
-
-        //datapoints.count().print();
 
         datapoints.count().foreach(new Function<JavaRDD<Long>, Void>() {
             @Override
@@ -100,10 +97,12 @@ public class App {
         return pubnub;
     }
 
-    private static void publishDatapointCount(Long datapointCount){
-        JsonObject data = new JsonObject();
-        data.addProperty("datapointCount", datapointCount);
-        getPubNub().publish(pubnubChannel, gson.toJson(data), callback);
+    private static void publishDatapointCount(Long datapointCount) throws Exception{
+        JSONObject eon = new JSONObject();
+        JSONObject data = new JSONObject();
+        data.put("datapointCount", datapointCount);
+        eon.put("eon", data);
+        getPubNub().publish(pubnubChannel, eon, callback);
     }
 
 }

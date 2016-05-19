@@ -47,7 +47,6 @@ ENV MAVEN_HOME /usr/share/maven
 # Add code
 ADD tisensor-spark /tisensor-spark
 WORKDIR /tisensor-spark
-RUN mvn package
 
 # Add driver script
 ADD run.py /tisensor-spark

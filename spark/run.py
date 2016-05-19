@@ -16,7 +16,7 @@ ZOOKEEPER_NODE_LIST = ','.join(s + "/zk-kafka/kafka" for s in (get_node_list(
         'zookeeper', ports=['client'])))
 
 KAFKA_TOPIC = os.getenv('KAFKA_TOPIC')
-call(['env'])
+call(['mvn', 'package'])
 call(['/opt/spark/bin/spark-submit',
       '--class',
       'com.tisensor.App',
