@@ -1,7 +1,11 @@
 package com.tisensor;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.pubnub.api.Callback;
+import com.pubnub.api.Pubnub;
+import com.pubnub.api.PubnubError;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
@@ -18,6 +22,14 @@ import java.util.Map;
 
 
 public class App {
+    static Pubnub pubnub;
+    static String publishKey = System.getenv("PUBNUB_PUBLISH_KEY");
+    static String subscribeKey = System.getenv("PUBNUB_SUBSCRIBE_KEY");
+    static Callback callback;
+    static final String pubnubChannel = "tisensor-spark";
+    static final Gson gson = new GsonBuilder().create();
+
+
     public static void main(String[] args) throws Exception {
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
@@ -26,7 +38,6 @@ public class App {
         String appName = "tisensor_spark";
         String topicName = args[0];
         String zkQuorum = args[1];
-        final String pubnubChannel = "tisensor-spark";
 
         SparkConf sparkConf = new SparkConf().setMaster(masterURL).setAppName(appName);
 
@@ -51,10 +62,7 @@ public class App {
                     public void call(Long aLong) throws Exception {
                         System.out.println(aLong);
                         try {
-                            JsonObject data = new JsonObject();
-                            data.addProperty("Total Datapoints Count:", aLong);
-                            MyPubnub.pubnub.publish(pubnubChannel, new GsonBuilder().create().toJson
-                                    (data), MyPubnub.callback);
+                            publishDatapointCount(aLong);
                         }catch(Exception e){
                             System.out.println("Unable to publish data to " +
                                     "PubNub");
@@ -65,17 +73,37 @@ public class App {
             }
         });
 
-        /*datapoints.foreachRDD(
-                new Function<JavaRDD<String>, String>() {
-                    public Void call(JavaRDD<String> dpRDD) throws Exception {
-                        dp
-                        return null;
-                    }
-                }
-        );*/
-
         jssc.start(); // Start the computation
         jssc.awaitTermination();
+    }
+
+    private static Pubnub getPubNub(){
+        if(pubnub == null){
+            if(publishKey == null || subscribeKey == null){
+                throw new NullPointerException("Environment variables:" +
+                        "PUBNUB_PUBLISH_KEY or " +
+                        "PUBNUB_SUBSCRIBE_KEY is not set!");
+            }
+            pubnub = new Pubnub(publishKey, subscribeKey);
+            callback = new Callback() {
+                public void successCallback(String channel, Object response) {
+                    System.out.println("My Publish callback message: "+response
+                            .toString
+                            ());
+                }
+                public void errorCallback(String channel, PubnubError error) {
+                    System.out.println("My Publish callback message: "+error
+                            .toString());
+                }
+            };
+        }
+        return pubnub;
+    }
+
+    private static void publishDatapointCount(Long datapointCount){
+        JsonObject data = new JsonObject();
+        data.addProperty("datapointCount", datapointCount);
+        getPubNub().publish(pubnubChannel, gson.toJson(data), callback);
     }
 
 }

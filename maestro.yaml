@@ -20,7 +20,9 @@ audit:
         'KAFKA_TOPIC': 'DATAPOINT',
         'KAFKA_PER_CONSUMER_THREADS': 3,
         'SIMULATED_TISENSOR_COUNT': 3,
-        'SIMULATED_TISENSOR_ID_HANDLE': 'TISENSOR_ID'
+        'SIMULATED_TISENSOR_ID_HANDLE': 'TISENSOR_ID_',
+        'PUBNUB_PUBLISH_KEY': '',
+        'PUBNUB_SUBSCRIBE_KEY': ''
         } %}
 
 # 1-node kafka cluster.
@@ -157,17 +159,5 @@ services:
         ship: {{ ship }}
       {%- endfor %}
       {%- endfor %}
-
-  envtest:
-    image: stackbrew/ubuntu
-    wants_info: [ zookeeper, kafka ]
-    omit: true
-    instances:
-      envtest:
-        ship: ship
-        env:
-          FOO: "bar test"
-        workdir: /tmp
-        command: "bash -c 'echo Here is the environment of a service depending on ZooKeeper and Kafka: && env'"
 
 {%- endwith %}
