@@ -1,0 +1,40 @@
+<html>
+  <head>
+
+    <script type="text/javascript" src="http://pubnub.github.io/eon/v/eon/0.0.10/eon.js"></script>
+    <link type="text/css" rel="stylesheet" href="http://pubnub.github.io/eon/v/eon/0.0.10/eon.css" />
+
+  </head>
+  <body>
+    <div id="chart"></div>
+
+    <script>
+
+    var channel = 'tisensor-spark';
+
+    var pubnub = PUBNUB.init({
+      subscribe_key: 'sub-c-dd8b73d8-1b1a-11e6-a01f-0619f8945a4f'
+    })
+
+    pubnub.subscribe({
+      channel : channel,
+      message : function(msg){ console.log(msg) }
+    });
+
+    eon.chart({
+        channel: channel,
+        history: true,
+        flow: true,
+        pubnub: pubnub,
+        generate: {
+          bindto: '#chart',
+          data: {
+            type: 'spline',
+            labels: false
+          }
+        }
+      });
+    
+    </script>
+  </body>
+</html>
